@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robot_teacher</name>
+  <version>1.0.0</version>
+  <description>
+    Robot-pedagog: ROS2 package for gesture-controlled and voice-enabled
+    educational robot interaction using OpenCV and LLM APIs.
+  </description>
+  <maintainer email="candidate@example.com">Candidate</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+
+  <exec_depend>libopencv-dev</exec_depend>
+  <exec_depend>libcurl4-openssl-dev</exec_depend>
+  <exec_depend>nlohmann-json3-dev</exec_depend>
+  <exec_depend>portaudio19-dev</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
