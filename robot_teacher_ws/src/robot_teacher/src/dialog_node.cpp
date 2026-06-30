@@ -276,15 +276,14 @@ private:
             stateName(state_), stateName(next));
         state_ = next;
         if (next == SessionState::BYE) {
-            // After farewell, go IDLE
-            auto timer = create_wall_timer(4s, [this]() {
+            // After farewell, go IDLE (timer stored as member — avoids immediate destruction)
+            bye_timer_ = create_wall_timer(4s, [this]() {
+                bye_timer_.reset();  // self-cancel (one-shot)
                 if (state_ == SessionState::BYE) {
                     transitionTo(SessionState::IDLE);
                     history_.clear();
                 }
-                // cancel self (one-shot)
             });
-            (void)timer;
         }
     }
 
@@ -518,6 +517,7 @@ private:
 
     // ── Members ───────────────────────────────────────────────
     SessionState state_;
+    rclcpp::TimerBase::SharedPtr bye_timer_;
 
     std::string llm_provider_;
     std::string anthropic_model_;
