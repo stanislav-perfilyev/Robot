@@ -51,7 +51,7 @@ public:
      * Analyse a skin-segmented binary mask (hand region) and return
      * a gesture label string.  Returns empty string if inconclusive.
      */
-    std::string classify(const cv::Mat& skin_mask, const cv::Mat& frame) {
+    [[nodiscard]] std::string classify(const cv::Mat& skin_mask, const cv::Mat& frame) {
         // Find contours
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(skin_mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
