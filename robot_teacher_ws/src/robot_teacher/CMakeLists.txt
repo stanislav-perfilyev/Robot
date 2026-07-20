@@ -32,6 +32,24 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PORTAUDIO portaudio-2.0)
 
+# ========== Utility library (unit-testable, framework-independent logic) ==========
+# WAV packaging, JSON escaping/parsing, session-state naming and gesture
+# classification are pure/near-pure logic extracted out of the node .cpp
+# files so they can be exercised by gtest without spinning up rclcpp nodes.
+add_library(robot_teacher_utils STATIC
+  src/wav_utils.cpp
+  src/curl_utils.cpp
+  src/dialog_utils.cpp
+  src/gesture_classifier.cpp
+)
+target_include_directories(robot_teacher_utils PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  ${OpenCV_INCLUDE_DIRS}
+)
+target_link_libraries(robot_teacher_utils PUBLIC
+  ${OpenCV_LIBS}
+)
+
 # ========== Perception Node ==========
 add_executable(perception_node
   src/perception_node.cpp
@@ -41,6 +59,7 @@ target_include_directories(perception_node PUBLIC
   ${OpenCV_INCLUDE_DIRS}
 )
 target_link_libraries(perception_node
+  robot_teacher_utils
   ${OpenCV_LIBS}
 )
 ament_target_dependencies(perception_node
@@ -59,6 +78,7 @@ target_include_directories(hearing_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 target_link_libraries(hearing_node
+  robot_teacher_utils
   CURL::libcurl
 )
 if(PORTAUDIO_FOUND)
@@ -79,6 +99,7 @@ target_include_directories(dialog_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 target_link_libraries(dialog_node
+  robot_teacher_utils
   CURL::libcurl
 )
 ament_target_dependencies(dialog_node
@@ -95,8 +116,34 @@ install(TARGETS
 
 install(DIRECTORY
   launch
-  config
   DESTINATION share/${PROJECT_NAME}
 )
+
+# ========== Tests ==========
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+
+  ament_add_gtest(test_wav_utils test/test_wav_utils.cpp)
+  target_link_libraries(test_wav_utils robot_teacher_utils)
+  target_include_directories(test_wav_utils PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  )
+
+  ament_add_gtest(test_dialog_utils test/test_dialog_utils.cpp)
+  target_link_libraries(test_dialog_utils robot_teacher_utils)
+  target_include_directories(test_dialog_utils PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  )
+
+  ament_add_gtest(test_gesture_classifier test/test_gesture_classifier.cpp)
+  target_link_libraries(test_gesture_classifier robot_teacher_utils ${OpenCV_LIBS})
+  target_include_directories(test_gesture_classifier PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    ${OpenCV_INCLUDE_DIRS}
+  )
+endif()
 
 ament_package()

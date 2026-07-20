@@ -30,85 +30,14 @@
 #include <curl/curl.h>
 
 #include "robot_teacher/common.hpp"
+#include "robot_teacher/dialog_utils.hpp"
+#include "robot_teacher/curl_utils.hpp"
 
 using namespace std::chrono_literals;
-
-// ─────────────────────────────────────────────────────────────
-//  Session state machine
-// ─────────────────────────────────────────────────────────────
-enum class SessionState {
-    IDLE,       // no face
-    GREETING,   // face appeared, greeting in progress
-    DIALOG,     // normal gesture/voice interaction
-    LISTENING,  // waiting for voice input (STT active)
-    PAUSED,     // open-palm stop
-    BYE         // face left, farewell in progress
-};
-
-static const char* stateName(SessionState s) {
-    switch (s) {
-        case SessionState::IDLE:      return "IDLE";
-        case SessionState::GREETING:  return "GREETING";
-        case SessionState::DIALOG:    return "DIALOG";
-        case SessionState::LISTENING: return "LISTENING";
-        case SessionState::PAUSED:    return "PAUSED";
-        case SessionState::BYE:       return "BYE";
-    }
-    return "?";
-}
-
-// ─────────────────────────────────────────────────────────────
-//  CURL helpers
-// ─────────────────────────────────────────────────────────────
-static size_t curlWriteCb(char* ptr, size_t size, size_t nmemb, void* ud) {
-    auto* s = static_cast<std::string*>(ud);
-    s->append(ptr, size * nmemb);
-    return size * nmemb;
-}
-
-static std::string jsonEscape(const std::string& s) {
-    std::string out;
-    out.reserve(s.size() + 8);
-    for (unsigned char c : s) {
-        if      (c == '"')  out += "\\\"";
-        else if (c == '\\') out += "\\\\";
-        else if (c == '\n') out += "\\n";
-        else if (c == '\r') out += "\\r";
-        else if (c == '\t') out += "\\t";
-        else                out += c;
-    }
-    return out;
-}
-
-// Parse "content" field from Claude/OpenAI JSON response (minimal, no dep)
-static std::string parseContent(const std::string& body, bool is_anthropic) {
-    // Anthropic: "text":"..."  inside content array
-    // OpenAI:    "content":"..."
-    std::string key = is_anthropic ? "\"text\":" : "\"content\":";
-    auto pos = body.find(key);
-    if (pos == std::string::npos) return "";
-    pos += key.size();
-    // skip whitespace
-    while (pos < body.size() && (body[pos] == ' ' || body[pos] == '\n')) ++pos;
-    if (pos >= body.size() || body[pos] != '"') return "";
-    ++pos;
-    std::string result;
-    while (pos < body.size()) {
-        if (body[pos] == '\\' && pos + 1 < body.size()) {
-            char next = body[pos + 1];
-            if (next == '"')  { result += '"';  pos += 2; continue; }
-            if (next == '\\') { result += '\\'; pos += 2; continue; }
-            if (next == 'n')  { result += '\n'; pos += 2; continue; }
-            if (next == 't')  { result += '\t'; pos += 2; continue; }
-            result += body[pos]; pos++;
-        } else if (body[pos] == '"') {
-            break;
-        } else {
-            result += body[pos]; pos++;
-        }
-    }
-    return result;
-}
+using robot_teacher::SessionState;
+using robot_teacher::stateName;
+using robot_teacher::jsonEscape;
+using robot_teacher::parseContent;
 
 // ─────────────────────────────────────────────────────────────
 //  DialogNode
@@ -399,7 +328,7 @@ private:
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER,   headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS,   body_str.c_str());
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)body_str.size());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCb);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, robot_teacher::curlWriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA,    &response);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT,      30L);
 
@@ -452,7 +381,7 @@ private:
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER,   headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS,   body_str.c_str());
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)body_str.size());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCb);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, robot_teacher::curlWriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA,    &response);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT,      30L);
 

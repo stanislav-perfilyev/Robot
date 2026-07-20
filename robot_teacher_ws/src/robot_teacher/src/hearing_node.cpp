@@ -35,64 +35,10 @@
 #endif
 
 #include "robot_teacher/common.hpp"
+#include "robot_teacher/wav_utils.hpp"
+#include "robot_teacher/curl_utils.hpp"
 
 using namespace std::chrono_literals;
-
-// ─────────────────────────────────────────────────────────────
-//  WAV helpers
-// ─────────────────────────────────────────────────────────────
-static std::vector<uint8_t> buildWav(
-    const std::vector<int16_t>& samples,
-    uint32_t sample_rate = 16000,
-    uint16_t channels    = 1)
-{
-    uint32_t data_bytes  = samples.size() * sizeof(int16_t);
-    uint32_t file_bytes  = 36 + data_bytes;
-
-    std::vector<uint8_t> wav;
-    wav.reserve(44 + data_bytes);
-
-    auto push4 = [&](uint32_t v) {
-        wav.push_back(v & 0xFF);
-        wav.push_back((v >> 8) & 0xFF);
-        wav.push_back((v >> 16) & 0xFF);
-        wav.push_back((v >> 24) & 0xFF);
-    };
-    auto push2 = [&](uint16_t v) {
-        wav.push_back(v & 0xFF);
-        wav.push_back((v >> 8) & 0xFF);
-    };
-    auto pushStr = [&](const char* s, size_t n) {
-        for (size_t i = 0; i < n; ++i) wav.push_back(s[i]);
-    };
-
-    pushStr("RIFF", 4);
-    push4(file_bytes);
-    pushStr("WAVE", 4);
-    pushStr("fmt ", 4);
-    push4(16);            // chunk size
-    push2(1);             // PCM
-    push2(channels);
-    push4(sample_rate);
-    push4(sample_rate * channels * 2);  // byte rate
-    push2(channels * 2);                // block align
-    push2(16);                          // bits per sample
-    pushStr("data", 4);
-    push4(data_bytes);
-
-    const uint8_t* raw = reinterpret_cast<const uint8_t*>(samples.data());
-    wav.insert(wav.end(), raw, raw + data_bytes);
-    return wav;
-}
-
-// ─────────────────────────────────────────────────────────────
-//  CURL write callback
-// ─────────────────────────────────────────────────────────────
-static size_t curlWriteCb(char* ptr, size_t size, size_t nmemb, void* userdata) {
-    auto* buf = static_cast<std::string*>(userdata);
-    buf->append(ptr, size * nmemb);
-    return size * nmemb;
-}
 
 // ─────────────────────────────────────────────────────────────
 //  HearingNode
@@ -236,7 +182,7 @@ private:
 
         // Run STT asynchronously so we don't block the capture pipeline
         if (stt_thread_.joinable()) stt_thread_.join();
-        auto wav = buildWav(samples, sample_rate_);
+        auto wav = robot_teacher::buildWav(samples, sample_rate_);
         stt_thread_ = std::thread(&HearingNode::runSTT, this, std::move(wav));
     }
 
@@ -288,7 +234,7 @@ private:
             "https://api.openai.com/v1/audio/transcriptions");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER,    headers);
         curl_easy_setopt(curl, CURLOPT_MIMEPOST,      mime);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCb);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, robot_teacher::curlWriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA,     &response_body);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT,       30L);
 
