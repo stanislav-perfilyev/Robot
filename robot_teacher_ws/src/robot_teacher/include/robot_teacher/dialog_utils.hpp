@@ -1,22 +1,44 @@
+// Copyright 2026 Candidate
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 #pragma once
 
 #include <string>
 
-namespace robot_teacher {
+namespace robot_teacher
+{
 
 /// Dialog session states. Drives what gestures/speech mean at any given
 /// moment (e.g. RAISED_HAND only starts STT while in DIALOG/GREETING).
-enum class SessionState {
-    IDLE,       ///< no face
-    GREETING,   ///< face appeared, greeting in progress
-    DIALOG,     ///< normal gesture/voice interaction
-    LISTENING,  ///< waiting for voice input (STT active)
-    PAUSED,     ///< open-palm stop
-    BYE         ///< face left, farewell in progress
+enum class SessionState
+{
+  IDLE,         ///< no face
+  GREETING,     ///< face appeared, greeting in progress
+  DIALOG,       ///< normal gesture/voice interaction
+  LISTENING,    ///< waiting for voice input (STT active)
+  PAUSED,       ///< open-palm stop
+  BYE           ///< face left, farewell in progress
 };
 
 /// Human-readable name for a SessionState, used in log lines.
-[[nodiscard]] const char* stateName(SessionState s);
+[[nodiscard]] const char * stateName(SessionState s);
 
 /**
  * Escapes a string for safe embedding inside a JSON string literal:
@@ -25,7 +47,7 @@ enum class SessionState {
  * full JSON-string validation — sufficient for the LLM prompt text
  * this project sends, which is plain conversational Russian/English.
  */
-[[nodiscard]] std::string jsonEscape(const std::string& s);
+[[nodiscard]] std::string jsonEscape(const std::string & s);
 
 /**
  * Extracts the assistant's reply text from a Claude or OpenAI chat
@@ -38,6 +60,6 @@ enum class SessionState {
  *                     (OpenAI chat completion format).
  * @return Decoded reply text, or empty string if the key wasn't found.
  */
-[[nodiscard]] std::string parseContent(const std::string& body, bool is_anthropic);
+[[nodiscard]] std::string parseContent(const std::string & body, bool is_anthropic);
 
 }  // namespace robot_teacher
