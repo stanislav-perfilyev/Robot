@@ -1,0 +1,48 @@
+name: Robot CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy-ros-base
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install package dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ros-jazzy-cv-bridge \
+            ros-jazzy-image-transport \
+            ros-jazzy-ament-lint-auto \
+            ros-jazzy-ament-lint-common \
+            ros-jazzy-ament-cmake-gtest \
+            libopencv-dev \
+            libcurl4-openssl-dev \
+            nlohmann-json3-dev \
+            portaudio19-dev
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Build (colcon)
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd robot_teacher_ws
+          colcon build --symlink-install --event-handlers console_direct+
+
+      - name: Test (colcon + ament_lint_auto + gtest)
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd robot_teacher_ws
+          colcon test --event-handlers console_direct+
+          colcon test-result --verbose
